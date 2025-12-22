@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { page } from "$app/state";
 
-	let {
-		type,
-		value,
-		color = "blue",
-	}: {
-		type: string;
-		value: string;
-		color?: "blue" | "green" | "purple" | "orange";
-	} = $props();
+	let { type, value }: { type: string; value: string } = $props();
+
+	const colors: Record<string, string> = {
+		search: "blue",
+		tags: "green",
+		category: "purple",
+		author: "orange",
+	};
 
 	function removeFilterHref() {
 		const params = new URLSearchParams(page.url.search);
@@ -31,7 +30,7 @@
 	}
 </script>
 
-<span class="filter-pill {color}">
+<span class="filter-pill {colors[type]}">
 	<span class="filter-type">{type}</span>: {value}
 	<a href={removeFilterHref()} class="filter-remove">×</a>
 </span>

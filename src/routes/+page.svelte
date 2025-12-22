@@ -15,50 +15,67 @@
 		jsEnabled = true;
 	});
 
-	let tags = $derived(page.url.searchParams.getAll("tags") || null);
-	let category = $derived(page.url.searchParams.get("category") || null);
-	let author = $derived(page.url.searchParams.get("author") || null);
-	let query = $derived(page.url.searchParams.get("search") || null);
+	let activeTags = $derived(page.url.searchParams.getAll("tags") || null);
+	let activeCategory = $derived(page.url.searchParams.get("category") || null);
+	let activeAuthor = $derived(page.url.searchParams.get("author") || null);
+	let activeSearch = $derived(page.url.searchParams.get("search") || null);
+
+	const hasActiveFilters = $derived(
+		activeTags.length > 0 || activeCategory || activeAuthor || activeSearch
+	);
 
 	const posts = $derived(
 		await search({
-			tags,
-			category,
-			author,
-			query,
+			tags: activeTags,
+			category: activeCategory,
+			author: activeAuthor,
+			query: activeSearch,
 		}),
 	);
 
-	const filterQuery = (array: string[], searchQuery: string) => {
-		return searchQuery
-			? array.filter((item: string) =>
-					item.toLowerCase().includes(searchQuery.toLowerCase()),
-				)
+	// Fetch filter options from server
+	const allTags = $derived(await getTags());
+	const allCategories = $derived(await getCategories());
+	const allAuthors = $derived(await getAuthors());
+
+	const filterOptions = (array: string[], query: string) => {
+		return query
+			? array.filter((item) => item.toLowerCase().includes(query.toLowerCase()))
 			: [];
 	};
 
-	function highlightMatch(text: string, search: string) {
-		if (!search) return text;
-		const regex = new RegExp(`(${search})`, "gi");
-		return text.replace(regex, "<mark>$1</mark>");
+	// Build URL with deduplication
+	function buildFilterUrl(type: string, value: string): string {
+		const params = new URLSearchParams(page.url.searchParams);
+
+		if (type === "tags") {
+			const existingTags = params.getAll("tags");
+			if (!existingTags.includes(value)) {
+				params.append("tags", value);
+			}
+		} else {
+			params.set(type, value);
+		}
+
+		return `/?${params.toString()}`;
 	}
 </script>
 
-<h1>Omnisearch without JS</h1>
+<h1>Omnisearch</h1>
 
 <div class="search-container">
 	<form method="GET" action="/">
-		{#each tags as tag}
-			<input type="hidden" name="tags" value={tag} />
+		{#each activeTags as tagValue}
+			<input type="hidden" name="tags" value={tagValue} />
 		{/each}
-		{#if category}
-			<input type="hidden" name="category" value={category} />
+		{#if activeCategory}
+			<input type="hidden" name="category" value={activeCategory} />
 		{/if}
-		{#if author}
-			<input type="hidden" name="author" value={author} />
+		{#if activeAuthor}
+			<input type="hidden" name="author" value={activeAuthor} />
 		{/if}
-		{#if query}
-			<input type="hidden" name="search" value={query} />
+		{#if activeSearch}
+			<input type="hidden" name="search" value={activeSearch} />
 		{/if}
 
 		<div class="search-input-wrapper">
@@ -75,41 +92,23 @@
 
 		<div class="dropdown">
 			{#if jsEnabled}
-				{#each filterQuery(await getTags(), searchQuery) as tag}
-					<a
-						href="/?{new URLSearchParams([
-							...page.url.searchParams,
-							['tags', tag],
-						]).toString()}"
-						class="dropdown-item tag"
-					>
-						{@html highlightMatch(tag, searchQuery)}
+				{#each filterOptions(allTags, searchQuery) as tagValue}
+					<a href={buildFilterUrl("tags", tagValue)} class="dropdown-item tags">
+						{tagValue}
 						<span class="dropdown-hint">in tags</span>
 					</a>
 				{/each}
 
-				{#each filterQuery(await getCategories(), searchQuery) as category}
-					<a
-						href="/?{new URLSearchParams([
-							...page.url.searchParams,
-							['category', category],
-						]).toString()}"
-						class="dropdown-item category"
-					>
-						{@html highlightMatch(category, searchQuery)}
+				{#each filterOptions(allCategories, searchQuery) as categoryValue}
+					<a href={buildFilterUrl("category", categoryValue)} class="dropdown-item category">
+						{categoryValue}
 						<span class="dropdown-hint">in category</span>
 					</a>
 				{/each}
 
-				{#each filterQuery(await getAuthors(), searchQuery) as author}
-					<a
-						href="/?{new URLSearchParams([
-							...page.url.searchParams,
-							['author', author],
-						]).toString()}"
-						class="dropdown-item author"
-					>
-						{@html highlightMatch(author, searchQuery)}
+				{#each filterOptions(allAuthors, searchQuery) as authorValue}
+					<a href={buildFilterUrl("author", authorValue)} class="dropdown-item author">
+						{authorValue}
 						<span class="dropdown-hint">in author</span>
 					</a>
 				{/each}
@@ -137,34 +136,46 @@
 
 <h2>Active Filters</h2>
 <div class="filters-container">
-	{#if query}
-		<FilterPill type="search" value={query} color="blue" />
-	{/if}
-	{#each tags as tag}
-		<FilterPill type="tags" value={tag} color="green" />
-	{/each}
-	{#if category}
-		<FilterPill type="category" value={category} color="purple" />
-	{/if}
-	{#if author}
-		<FilterPill type="author" value={author} color="orange" />
+	{#if hasActiveFilters}
+		{#if activeSearch}
+			<FilterPill type="search" value={activeSearch} />
+		{/if}
+		{#each activeTags as tagValue}
+			<FilterPill type="tags" value={tagValue} />
+		{/each}
+		{#if activeCategory}
+			<FilterPill type="category" value={activeCategory} />
+		{/if}
+		{#if activeAuthor}
+			<FilterPill type="author" value={activeAuthor} />
+		{/if}
+		<a href="/" class="clear-all">Clear all</a>
+	{:else}
+		<span class="no-filters">No active filters</span>
 	{/if}
 </div>
 
-<h2>Posts ({posts?.length})</h2>
-<ul class="posts-list">
-	{#each posts as post}
-		<li class="post-item">
-			<p class="post-body">{post.body}</p>
-			<div class="post-meta">
-				<span class="post-category">{post.category}</span>
-				<span>by {post.author}</span>
-				<div class="post-tags">
-					{#each post.tags as tag}
-						<span class="post-tag">{tag}</span>
-					{/each}
+<h2>Posts ({posts.length})</h2>
+{#if posts.length > 0}
+	<ul class="posts-list">
+		{#each posts as post}
+			<li class="post-item">
+				<p class="post-body">{post.body}</p>
+				<div class="post-meta">
+					<span class="post-category">{post.category}</span>
+					<span>by {post.author}</span>
+					<div class="post-tags">
+						{#each post.tags as postTag}
+							<span class="post-tag">{postTag}</span>
+						{/each}
+					</div>
 				</div>
-			</div>
-		</li>
-	{/each}
-</ul>
+			</li>
+		{/each}
+	</ul>
+{:else}
+	<div class="empty-state">
+		<p>No posts match your filters.</p>
+		<a href="/">Clear all filters</a>
+	</div>
+{/if}

@@ -106,7 +106,7 @@ h2 {
   background: #f3f4f6;
 }
 
-.dropdown-item.tag:hover {
+.dropdown-item.tags:hover {
   background: #f0fdf4;
 }
 
@@ -127,13 +127,6 @@ h2 {
 .dropdown-placeholder {
   padding: 0.25rem 0.5rem;
   color: #9ca3af;
-}
-
-/* Highlight */
-mark {
-  background: #fef08a;
-  padding: 0 0.125rem;
-  border-radius: 0.125rem;
 }
 
 /* Active filters */
@@ -233,4 +226,48 @@ mark {
   padding: 0.25rem 0.5rem;
   background: #dcfce7;
   border-radius: 0.25rem;
+}
+
+/* Clear all button */
+.clear-all {
+  padding: 0.25rem 0.5rem;
+  color: #dc2626;
+  text-decoration: none;
+  font-size: 0.875rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.25rem;
+  background: #fef2f2;
+}
+
+.clear-all:hover {
+  background: #fee2e2;
+}
+
+/* No filters placeholder */
+.no-filters {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+/* Empty state */
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  color: #6b7280;
+}
+
+.empty-state p {
+  margin: 0 0 1rem;
+}
+
+.empty-state a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.empty-state a:hover {
+  text-decoration: underline;
 }
