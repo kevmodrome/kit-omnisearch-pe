@@ -40,12 +40,13 @@
 	function highlightMatch(text: string, search: string) {
 		if (!search) return text;
 		const regex = new RegExp(`(${search})`, "gi");
-		return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
+		return text.replace(regex, "<mark>$1</mark>");
 	}
 </script>
 
-<h1 class="text-3xl font-bold">Omnisearch without JS</h1>
-<div class="w-75 group relative m-4">
+<h1>Omnisearch without JS</h1>
+
+<div class="search-container">
 	<form method="GET" action="/">
 		{#each tags as tag}
 			<input type="hidden" name="tags" value={tag} />
@@ -60,25 +61,19 @@
 			<input type="hidden" name="search" value={query} />
 		{/if}
 
-		<div class="relative">
+		<div class="search-input-wrapper">
 			<input
 				type="search"
 				name="q"
 				placeholder="Enter query..."
 				autocomplete="off"
 				bind:value={searchQuery}
-				class="w-full py-3 px-4 border border-gray-300 rounded-lg"
+				class="search-input"
 			/>
-			<button
-				class="absolute right-2 top-2 border border-gray-200 rounded-md px-2 py-1"
-				name="type"
-				value="all">Submit</button
-			>
+			<button class="submit-button" name="type" value="all">Submit</button>
 		</div>
 
-		<div
-			class="absolute left-0 top-full right-0 grid gap-2 p-2 border rounded-lg bg-white shadow-lg opacity-0 invisible group-focus-within:opacity-100 group-focus-within:visible"
-		>
+		<div class="dropdown">
 			{#if jsEnabled}
 				{#each filterQuery(await getTags(), searchQuery) as tag}
 					<a
@@ -86,10 +81,10 @@
 							...page.url.searchParams,
 							['tags', tag],
 						]).toString()}"
-						class="block py-1 px-2 text-left hover:bg-green-50 rounded"
+						class="dropdown-item tag"
 					>
 						{@html highlightMatch(tag, searchQuery)}
-						<span class="text-gray-500">in tags</span>
+						<span class="dropdown-hint">in tags</span>
 					</a>
 				{/each}
 
@@ -99,10 +94,10 @@
 							...page.url.searchParams,
 							['category', category],
 						]).toString()}"
-						class="block py-1 px-2 text-left hover:bg-purple-50 rounded"
+						class="dropdown-item category"
 					>
 						{@html highlightMatch(category, searchQuery)}
-						<span class="text-gray-500">in category</span>
+						<span class="dropdown-hint">in category</span>
 					</a>
 				{/each}
 
@@ -112,45 +107,36 @@
 							...page.url.searchParams,
 							['author', author],
 						]).toString()}"
-						class="block py-1 px-2 text-left hover:bg-orange-50 rounded"
+						class="dropdown-item author"
 					>
 						{@html highlightMatch(author, searchQuery)}
-						<span class="text-gray-500">in author</span>
+						<span class="dropdown-hint">in author</span>
 					</a>
 				{/each}
+
 				{#if !searchQuery}
-					<span class="py-1 px-2 text-gray-400"
-						>Start typing to search...</span
-					>
+					<span class="dropdown-placeholder">Start typing to search...</span>
 				{/if}
 			{:else}
-				<button
-					name="type"
-					value="tags"
-					class="py-1 px-2 text-left hover:bg-gray-100 rounded"
-				>
-					<strong>{query}</strong> in tags
+				<button name="type" value="tags" class="dropdown-item">
+					<strong>{searchQuery}</strong>
+					<span class="dropdown-hint">in tags</span>
 				</button>
-				<button
-					name="type"
-					value="category"
-					class="py-1 px-2 text-left hover:bg-gray-100 rounded"
-				>
-					<strong>{query}</strong> in category
+				<button name="type" value="category" class="dropdown-item">
+					<strong>{searchQuery}</strong>
+					<span class="dropdown-hint">in category</span>
 				</button>
-				<button
-					name="type"
-					value="author"
-					class="py-1 px-2 text-left hover:bg-gray-100 rounded"
-				>
-					<strong>{query}</strong> in author
+				<button name="type" value="author" class="dropdown-item">
+					<strong>{searchQuery}</strong>
+					<span class="dropdown-hint">in author</span>
 				</button>
 			{/if}
 		</div>
 	</form>
 </div>
-<h2 class="text-2xl font-semibold">Active Filters</h2>
-<div class="flex flex-wrap gap-2 mt-2 p-4 border border-gray-200 rounded-md">
+
+<h2>Active Filters</h2>
+<div class="filters-container">
 	{#if query}
 		<FilterPill type="search" value={query} color="blue" />
 	{/if}
@@ -165,20 +151,17 @@
 	{/if}
 </div>
 
-<h2 class="text-2xl font-semibold">Posts ({posts?.length})</h2>
-<ul class="space-y-4">
+<h2>Posts ({posts?.length})</h2>
+<ul class="posts-list">
 	{#each posts as post}
-		<li class="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-			<p class="text-gray-800 mb-2">{post.body}</p>
-			<div class="flex items-center gap-4 text-sm text-gray-600">
-				<span class="px-2 py-1 bg-purple-100 rounded"
-					>{post.category}</span
-				>
+		<li class="post-item">
+			<p class="post-body">{post.body}</p>
+			<div class="post-meta">
+				<span class="post-category">{post.category}</span>
 				<span>by {post.author}</span>
-				<div class="flex gap-1">
+				<div class="post-tags">
 					{#each post.tags as tag}
-						<span class="px-2 py-1 bg-green-100 rounded">{tag}</span
-						>
+						<span class="post-tag">{tag}</span>
 					{/each}
 				</div>
 			</div>
