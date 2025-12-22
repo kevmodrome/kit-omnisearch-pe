@@ -15,173 +15,167 @@
 		jsEnabled = true;
 	});
 
-	let tags = $derived(page.url.searchParams.getAll("tags") || null);
-	let category = $derived(page.url.searchParams.get("category") || null);
-	let author = $derived(page.url.searchParams.get("author") || null);
-	let query = $derived(page.url.searchParams.get("search") || null);
+	let activeTags = $derived(page.url.searchParams.getAll("tags") || null);
+	let activeCategory = $derived(page.url.searchParams.get("category") || null);
+	let activeAuthor = $derived(page.url.searchParams.get("author") || null);
+	let activeSearch = $derived(page.url.searchParams.get("search") || null);
+
+	const hasActiveFilters = $derived(
+		activeTags.length > 0 || activeCategory || activeAuthor || activeSearch
+	);
 
 	const posts = $derived(
 		await search({
-			tags,
-			category,
-			author,
-			query,
+			tags: activeTags,
+			category: activeCategory,
+			author: activeAuthor,
+			query: activeSearch,
 		}),
 	);
 
-	const filterQuery = (array: string[], searchQuery: string) => {
-		return searchQuery
-			? array.filter((item: string) =>
-					item.toLowerCase().includes(searchQuery.toLowerCase()),
-				)
+	// Fetch filter options from server
+	const allTags = $derived(await getTags());
+	const allCategories = $derived(await getCategories());
+	const allAuthors = $derived(await getAuthors());
+
+	const filterOptions = (array: string[], query: string) => {
+		return query
+			? array.filter((item) => item.toLowerCase().includes(query.toLowerCase()))
 			: [];
 	};
 
-	function highlightMatch(text: string, search: string) {
-		if (!search) return text;
-		const regex = new RegExp(`(${search})`, "gi");
-		return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
+	// Build URL with deduplication
+	function buildFilterUrl(type: string, value: string): string {
+		const params = new URLSearchParams(page.url.searchParams);
+
+		if (type === "tags") {
+			const existingTags = params.getAll("tags");
+			if (!existingTags.includes(value)) {
+				params.append("tags", value);
+			}
+		} else {
+			params.set(type, value);
+		}
+
+		return `/?${params.toString()}`;
 	}
 </script>
 
-<h1 class="text-3xl font-bold">Omnisearch without JS</h1>
-<div class="w-75 group relative m-4">
+<h1>Omnisearch</h1>
+
+<div class="search-container">
 	<form method="GET" action="/">
-		{#each tags as tag}
-			<input type="hidden" name="tags" value={tag} />
+		{#each activeTags as tagValue}
+			<input type="hidden" name="tags" value={tagValue} />
 		{/each}
-		{#if category}
-			<input type="hidden" name="category" value={category} />
+		{#if activeCategory}
+			<input type="hidden" name="category" value={activeCategory} />
 		{/if}
-		{#if author}
-			<input type="hidden" name="author" value={author} />
+		{#if activeAuthor}
+			<input type="hidden" name="author" value={activeAuthor} />
 		{/if}
-		{#if query}
-			<input type="hidden" name="search" value={query} />
+		{#if activeSearch}
+			<input type="hidden" name="search" value={activeSearch} />
 		{/if}
 
-		<div class="relative">
+		<div class="search-input-wrapper">
 			<input
 				type="search"
 				name="q"
 				placeholder="Enter query..."
 				autocomplete="off"
 				bind:value={searchQuery}
-				class="w-full py-3 px-4 border border-gray-300 rounded-lg"
+				class="search-input"
 			/>
-			<button
-				class="absolute right-2 top-2 border border-gray-200 rounded-md px-2 py-1"
-				name="type"
-				value="all">Submit</button
-			>
+			<button class="submit-button" name="type" value="all">Submit</button>
 		</div>
 
-		<div
-			class="absolute left-0 top-full right-0 grid gap-2 p-2 border rounded-lg bg-white shadow-lg opacity-0 invisible group-focus-within:opacity-100 group-focus-within:visible"
-		>
+		<div class="dropdown">
 			{#if jsEnabled}
-				{#each filterQuery(await getTags(), searchQuery) as tag}
-					<a
-						href="/?{new URLSearchParams([
-							...page.url.searchParams,
-							['tags', tag],
-						]).toString()}"
-						class="block py-1 px-2 text-left hover:bg-green-50 rounded"
-					>
-						{@html highlightMatch(tag, searchQuery)}
-						<span class="text-gray-500">in tags</span>
+				{#each filterOptions(allTags, searchQuery) as tagValue}
+					<a href={buildFilterUrl("tags", tagValue)} class="dropdown-item tags">
+						{tagValue}
+						<span class="dropdown-hint">in tags</span>
 					</a>
 				{/each}
 
-				{#each filterQuery(await getCategories(), searchQuery) as category}
-					<a
-						href="/?{new URLSearchParams([
-							...page.url.searchParams,
-							['category', category],
-						]).toString()}"
-						class="block py-1 px-2 text-left hover:bg-purple-50 rounded"
-					>
-						{@html highlightMatch(category, searchQuery)}
-						<span class="text-gray-500">in category</span>
+				{#each filterOptions(allCategories, searchQuery) as categoryValue}
+					<a href={buildFilterUrl("category", categoryValue)} class="dropdown-item category">
+						{categoryValue}
+						<span class="dropdown-hint">in category</span>
 					</a>
 				{/each}
 
-				{#each filterQuery(await getAuthors(), searchQuery) as author}
-					<a
-						href="/?{new URLSearchParams([
-							...page.url.searchParams,
-							['author', author],
-						]).toString()}"
-						class="block py-1 px-2 text-left hover:bg-orange-50 rounded"
-					>
-						{@html highlightMatch(author, searchQuery)}
-						<span class="text-gray-500">in author</span>
+				{#each filterOptions(allAuthors, searchQuery) as authorValue}
+					<a href={buildFilterUrl("author", authorValue)} class="dropdown-item author">
+						{authorValue}
+						<span class="dropdown-hint">in author</span>
 					</a>
 				{/each}
+
 				{#if !searchQuery}
-					<span class="py-1 px-2 text-gray-400"
-						>Start typing to search...</span
-					>
+					<span class="dropdown-placeholder">Start typing to search...</span>
 				{/if}
 			{:else}
-				<button
-					name="type"
-					value="tags"
-					class="py-1 px-2 text-left hover:bg-gray-100 rounded"
-				>
-					<strong>{query}</strong> in tags
+				<button name="type" value="tags" class="dropdown-item">
+					<strong>{searchQuery}</strong>
+					<span class="dropdown-hint">in tags</span>
 				</button>
-				<button
-					name="type"
-					value="category"
-					class="py-1 px-2 text-left hover:bg-gray-100 rounded"
-				>
-					<strong>{query}</strong> in category
+				<button name="type" value="category" class="dropdown-item">
+					<strong>{searchQuery}</strong>
+					<span class="dropdown-hint">in category</span>
 				</button>
-				<button
-					name="type"
-					value="author"
-					class="py-1 px-2 text-left hover:bg-gray-100 rounded"
-				>
-					<strong>{query}</strong> in author
+				<button name="type" value="author" class="dropdown-item">
+					<strong>{searchQuery}</strong>
+					<span class="dropdown-hint">in author</span>
 				</button>
 			{/if}
 		</div>
 	</form>
 </div>
-<h2 class="text-2xl font-semibold">Active Filters</h2>
-<div class="flex flex-wrap gap-2 mt-2 p-4 border border-gray-200 rounded-md">
-	{#if query}
-		<FilterPill type="search" value={query} color="blue" />
-	{/if}
-	{#each tags as tag}
-		<FilterPill type="tags" value={tag} color="green" />
-	{/each}
-	{#if category}
-		<FilterPill type="category" value={category} color="purple" />
-	{/if}
-	{#if author}
-		<FilterPill type="author" value={author} color="orange" />
+
+<h2>Active Filters</h2>
+<div class="filters-container">
+	{#if hasActiveFilters}
+		{#if activeSearch}
+			<FilterPill type="search" value={activeSearch} />
+		{/if}
+		{#each activeTags as tagValue}
+			<FilterPill type="tags" value={tagValue} />
+		{/each}
+		{#if activeCategory}
+			<FilterPill type="category" value={activeCategory} />
+		{/if}
+		{#if activeAuthor}
+			<FilterPill type="author" value={activeAuthor} />
+		{/if}
+		<a href="/" class="clear-all">Clear all</a>
+	{:else}
+		<span class="no-filters">No active filters</span>
 	{/if}
 </div>
 
-<h2 class="text-2xl font-semibold">Posts ({posts?.length})</h2>
-<ul class="space-y-4">
-	{#each posts as post}
-		<li class="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-			<p class="text-gray-800 mb-2">{post.body}</p>
-			<div class="flex items-center gap-4 text-sm text-gray-600">
-				<span class="px-2 py-1 bg-purple-100 rounded"
-					>{post.category}</span
-				>
-				<span>by {post.author}</span>
-				<div class="flex gap-1">
-					{#each post.tags as tag}
-						<span class="px-2 py-1 bg-green-100 rounded">{tag}</span
-						>
-					{/each}
+<h2>Posts ({posts.length})</h2>
+{#if posts.length > 0}
+	<ul class="posts-list">
+		{#each posts as post}
+			<li class="post-item">
+				<p class="post-body">{post.body}</p>
+				<div class="post-meta">
+					<span class="post-category">{post.category}</span>
+					<span>by {post.author}</span>
+					<div class="post-tags">
+						{#each post.tags as postTag}
+							<span class="post-tag">{postTag}</span>
+						{/each}
+					</div>
 				</div>
-			</div>
-		</li>
-	{/each}
-</ul>
+			</li>
+		{/each}
+	</ul>
+{:else}
+	<div class="empty-state">
+		<p>No posts match your filters.</p>
+		<a href="/">Clear all filters</a>
+	</div>
+{/if}

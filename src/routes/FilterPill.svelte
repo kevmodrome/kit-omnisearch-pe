@@ -1,22 +1,13 @@
-<!-- FilterPill.svelte -->
 <script lang="ts">
 	import { page } from "$app/state";
 
-	let {
-		type,
-		value,
-		color = "blue",
-	}: {
-		type: string;
-		value: string;
-		color?: "blue" | "green" | "purple" | "orange";
-	} = $props();
+	let { type, value }: { type: string; value: string } = $props();
 
-	const colors = {
-		blue: "bg-blue-100",
-		green: "bg-green-100",
-		purple: "bg-purple-100",
-		orange: "bg-orange-100",
+	const colors: Record<string, string> = {
+		search: "blue",
+		tags: "green",
+		category: "purple",
+		author: "orange",
 	};
 
 	function removeFilterHref() {
@@ -39,11 +30,7 @@
 	}
 </script>
 
-<span
-	class="inline-flex items-center gap-1 px-2 py-1 {colors[
-		color
-	]} rounded text-sm"
->
-	<span class="capitalize">{type}</span>: {value}
-	<a href={removeFilterHref()} class="text-red-500 hover:text-red-700">×</a>
+<span class="filter-pill {colors[type]}">
+	<span class="filter-type">{type}</span>: {value}
+	<a href={removeFilterHref()} class="filter-remove">×</a>
 </span>

@@ -33,31 +33,32 @@ export const search = query(schema, ({
     return posts
   }
 
+  // Use AND logic: post must match ALL provided filters
   return posts.filter(post => {
-    // Match category
-    if (category && post.category === category) {
-      return true
+    // Must match category if specified
+    if (category && post.category !== category) {
+      return false
     }
 
-    // Match author
-    if (author && post.author === author) {
-      return true
+    // Must match author if specified
+    if (author && post.author !== author) {
+      return false
     }
 
-    // Match any tag
+    // Must match at least one of the specified tags
     if (tags && tags.length > 0) {
-      if (tags.some(tag => post.tags.includes(tag))) {
-        return true
+      if (!tags.some(tag => post.tags.includes(tag))) {
+        return false
       }
     }
 
-    // Match search query in body
+    // Must match search query in body if specified
     if (query) {
-      if (post.body.toLowerCase().includes(query.toLowerCase())) {
-        return true
+      if (!post.body.toLowerCase().includes(query.toLowerCase())) {
+        return false
       }
     }
 
-    return false
+    return true
   })
 })
