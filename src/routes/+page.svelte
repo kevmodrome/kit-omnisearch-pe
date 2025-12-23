@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from "$app/environment";
 	import { page } from "$app/state";
 	import FilterPill from "./FilterPill.svelte";
 	import {
@@ -9,11 +10,6 @@
 	} from "./search.remote";
 
 	let searchQuery = $state("");
-	let jsEnabled = $state(false);
-
-	$effect(() => {
-		jsEnabled = true;
-	});
 
 	let activeTags = $derived(page.url.searchParams.getAll("tags") || null);
 	let activeCategory = $derived(page.url.searchParams.get("category") || null);
@@ -91,7 +87,7 @@
 		</div>
 
 		<div class="dropdown">
-			{#if jsEnabled}
+			{#if browser}
 				{#each filterOptions(allTags, searchQuery) as tagValue}
 					<a href={buildFilterUrl("tags", tagValue)} class="dropdown-item tags">
 						{tagValue}
